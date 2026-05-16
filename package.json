@@ -1,0 +1,63 @@
+{
+  "name": "whois2rdap",
+  "version": "0.1.0",
+  "description": "Convert WHOIS responses into RDAP-shaped objects",
+  "type": "module",
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": {
+        "types": "./dist/index.d.ts",
+        "default": "./dist/index.js"
+      },
+      "require": {
+        "types": "./dist/index.d.cts",
+        "default": "./dist/index.cjs"
+      }
+    }
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "README.ko.md",
+    "LICENSE"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/mack-erel/whois2rdap.git"
+  },
+  "homepage": "https://github.com/mack-erel/whois2rdap#readme",
+  "bugs": {
+    "url": "https://github.com/mack-erel/whois2rdap/issues"
+  },
+  "author": "Henry Jang <jang@hyochan.site>",
+  "publishConfig": {
+    "access": "public"
+  },
+  "scripts": {
+    "build": "tsup",
+    "dev": "tsup --watch",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "prepublishOnly": "bun run build"
+  },
+  "keywords": [
+    "whois",
+    "rdap",
+    "domain",
+    "converter"
+  ],
+  "license": "MIT",
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "tsup": "^8.3.0",
+    "typescript": "^5.6.0",
+    "vitest": "^2.1.0"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}

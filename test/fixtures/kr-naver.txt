@@ -1,0 +1,57 @@
+query : naver.kr
+
+
+# KOREAN(UTF8)
+
+도메인이름                  : naver.kr
+등록인                      : 네이버(주)
+등록인 주소                 : 경기도 성남시 분당구 정자일로 95
+등록인 우편번호             : 13561
+책임자                      : 도메인관리자
+책임자 전자우편             : dnsmaster@navercorp.com
+책임자 전화번호             : 1588-3820
+등록일                      : 2007. 03. 02.
+최근 정보 변경일            : 2024. 02. 14.
+사용 종료일                 : 2026. 03. 02.
+정보공개여부                : Y
+등록정보 보호               :
+
+1차 네임서버 정보
+   호스트이름               : ns1.naver.com
+   IP 주소                  : 125.209.234.151
+
+2차 네임서버 정보
+   호스트이름               : ns2.naver.com
+   IP 주소                  : 125.209.234.152
+
+등록대행자                  : (주)가비아 (http://www.gabia.com)
+DNSSEC                      : 미서명
+
+
+# ENGLISH
+
+Domain Name                 : naver.kr
+Registrant                  : NAVER Corp.
+Registrant Address          : 95, Jeongjail-ro, Bundang-gu, Seongnam-si, Gyeonggi-do
+Registrant Zip Code         : 13561
+Administrative Contact(AC)  : Domain Manager
+AC E-Mail                   : dnsmaster@navercorp.com
+AC Phone Number             : 1588-3820
+Registered Date             : 2007. 03. 02.
+Last Updated Date           : 2024. 02. 14.
+Expiration Date             : 2026. 03. 02.
+Publishes                   : Y
+
+Primary Name Server
+   Host Name                : ns1.naver.com
+   IP Address               : 125.209.234.151
+
+Secondary Name Server
+   Host Name                : ns2.naver.com
+   IP Address               : 125.209.234.152
+
+Authorized Agency           : Gabia, Inc.(http://www.gabia.com)
+DNSSEC                      : unsigned
+
+
+- KISA/KRNIC WHOIS Service -

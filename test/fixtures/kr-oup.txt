@@ -1,0 +1,48 @@
+query : oup.kr
+
+
+# KOREAN(UTF8)
+
+도메인이름                  : oup.kr
+등록인                      : Domain Privacy Services
+책임자                      : Domain Privacy Services
+책임자 전자우편             : DomainPrivacy@HOSTING.KR
+등록일                      : 2013. 08. 03.
+최근 정보 변경일            : 2022. 08. 08.
+사용 종료일                 : 2026. 08. 03.
+정보공개여부                : N
+등록대행자                  : 메가존(주)(http://HOSTING.KR)
+DNSSEC                      : 서명
+등록정보 보호               : clientTransferProhibited
+
+1차 네임서버 정보
+   호스트이름               : adel.ns.cloudflare.com
+
+2차 네임서버 정보
+   호스트이름               : trey.ns.cloudflare.com
+
+네임서버 이름이 .kr이 아닌 경우는 IP주소가 보이지 않습니다.
+
+
+# ENGLISH
+
+Domain Name                 : oup.kr
+Registrant                  : Domain Privacy Services
+Administrative Contact(AC)  : Domain Privacy Services
+AC E-Mail                   : DomainPrivacy@HOSTING.KR
+Registered Date             : 2013. 08. 03.
+Last Updated Date           : 2022. 08. 08.
+Expiration Date             : 2026. 08. 03.
+Publishes                   : N
+Authorized Agency           : Megazone(http://HOSTING.KR)
+DNSSEC                      : signed
+Domain Status               : clientTransferProhibited
+
+Primary Name Server
+   Host Name                : adel.ns.cloudflare.com
+
+Secondary Name Server
+   Host Name                : trey.ns.cloudflare.com
+
+
+- KISA/KRNIC WHOIS Service -
