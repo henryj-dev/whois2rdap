@@ -1,10 +1,12 @@
 import type {
+  ConvertOptions,
   RdapDomain,
   RdapEntity,
   RdapEvent,
   RdapNameserver,
   RdapVcardArray,
 } from "../types.js";
+import { finalize } from "../finalize.js";
 
 export interface KrNameserver {
   host: string;
@@ -62,12 +64,13 @@ const FIELD = /^([^:]+?)\s*:\s*(.*)$/;
 
 function parseKrDate(value: string): string | undefined {
   // KRNIC format: "2020. 01. 01." (also handles single-digit month/day)
+  // Dates are in KST (UTC+9); no time component is given so we use midnight KST.
   const m = value.match(/(\d{4})\.\s*(\d{1,2})\.\s*(\d{1,2})/);
   if (!m) return undefined;
   const y = m[1]!;
   const mo = m[2]!.padStart(2, "0");
   const d = m[3]!.padStart(2, "0");
-  return `${y}-${mo}-${d}T00:00:00Z`;
+  return `${y}-${mo}-${d}T00:00:00+09:00`;
 }
 
 export function parseKrWhois(raw: string): KrWhoisData {
@@ -167,7 +170,7 @@ export function parseKrWhois(raw: string): KrWhoisData {
       case "Domain Status":
       case "등록정보 보호": {
         const statuses = normalizeStatus(value);
-        if (statuses.length) data.status ??= statuses;
+        if (statuses.length) (data.status ??= []).push(...statuses);
         break;
       }
     }
@@ -183,10 +186,10 @@ function vcard(
   return ["vcard", [["version", {}, "text", "4.0"], ...props]];
 }
 
-export interface KrConvertOptions {
-  domain?: string;
-  includeConformance?: boolean;
-}
+// KrConvertOptions is an alias for ConvertOptions for backwards compatibility.
+// All ConvertOptions fields (sourceServer, normalizeCase, etc.) are honoured
+// when calling krWhoisToRdap directly.
+export type KrConvertOptions = ConvertOptions;
 
 export function krWhoisToRdap(raw: string, opts: KrConvertOptions = {}): RdapDomain {
   const data = parseKrWhois(raw);
@@ -209,7 +212,7 @@ export function krWhoisToRdap(raw: string, opts: KrConvertOptions = {}): RdapDom
     if (data.registrantAddress || data.registrantZip) {
       props.push([
         "adr",
-        data.registrantZip ? { code: data.registrantZip } : {},
+        {},
         "text",
         ["", "", data.registrantAddress ?? "", "", "", data.registrantZip ?? "", ""],
       ]);
@@ -263,10 +266,10 @@ export function krWhoisToRdap(raw: string, opts: KrConvertOptions = {}): RdapDom
   if (nameservers.length) result.nameservers = nameservers;
   if (events.length) result.events = events;
   if (data.dnssec) {
-    const v = data.dnssec.toLowerCase();
-    const signed = v === "signed" || (/서명/.test(data.dnssec) && !/미서명/.test(data.dnssec));
+    const v = data.dnssec.toLowerCase().trim();
+    const signed = v === "signed" || v === "서명";
     result.secureDNS = { delegationSigned: signed };
   }
 
-  return result;
+  return finalize(result, raw, opts);
 }

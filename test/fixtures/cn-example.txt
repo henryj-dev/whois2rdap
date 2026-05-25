@@ -1,0 +1,13 @@
+Domain Name: example.cn
+ROID: 20050501s10011s00000001-cn
+Domain Status: clientDeleteProhibited
+Domain Status: clientTransferProhibited
+Registrant: Example Corp.
+Registrant Contact Email: hostmaster@example.cn
+Sponsoring Registrar: Example Registrar Co., Ltd.
+Name Server: ns1.example.com
+Name Server: ns2.example.com
+Registration Time: 2005-05-01 08:00:00
+Expiration Time: 2026-05-01 08:00:00
+Last Updated Time: 2024-03-15 14:30:00
+DNSSEC: unsigned

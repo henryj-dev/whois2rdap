@@ -5,6 +5,7 @@ export {
   lookupRdap,
   whoisQuery,
   whoisServerForDomain,
+  clearWhoisServerCache,
   type LookupOptions,
   type WhoisQueryOptions,
 } from "./lookup.js";
@@ -18,6 +19,14 @@ export {
   type IanaRdapBootstrap,
 } from "./iana.js";
 export {
+  IANA_TLD_LIST_URL,
+  loadIanaTlds,
+  isValidTld,
+  setIanaTldsCache,
+  clearIanaTldsCache,
+  type TldLoadOptions,
+} from "./tld.js";
+export {
   krWhoisToRdap,
   parseKrWhois,
   type KrConvertOptions,
@@ -30,3 +39,8 @@ export {
   type CnConvertOptions,
   type CnWhoisData,
 } from "./parsers/cn.js";
+export {
+  genericWhoisToRdap,
+  parseGenericWhois,
+  type GenericWhoisData,
+} from "./parsers/generic.js";

@@ -1,10 +1,12 @@
 import type {
+  ConvertOptions,
   RdapDomain,
   RdapEntity,
   RdapEvent,
   RdapNameserver,
   RdapVcardArray,
 } from "../types.js";
+import { finalize } from "../finalize.js";
 
 export interface CnWhoisData {
   domain?: string;
@@ -53,10 +55,10 @@ function normalizeStatus(value: string): string[] {
 }
 
 function parseCnDate(value: string): string | undefined {
-  // CNNIC format: "2013-04-23 23:46:53" — assumed UTC.
+  // CNNIC format: "2013-04-23 23:46:53" — times are in CST (UTC+8).
   const m = value.match(/^(\d{4}-\d{2}-\d{2})[ T](\d{2}:\d{2}:\d{2})/);
   if (!m) return undefined;
-  return `${m[1]}T${m[2]}Z`;
+  return `${m[1]}T${m[2]}+08:00`;
 }
 
 export function parseCnWhois(raw: string): CnWhoisData {
@@ -127,10 +129,10 @@ function vcard(
   return ["vcard", [["version", {}, "text", "4.0"], ...props]];
 }
 
-export interface CnConvertOptions {
-  domain?: string;
-  includeConformance?: boolean;
-}
+// CnConvertOptions is an alias for ConvertOptions for backwards compatibility.
+// All ConvertOptions fields (sourceServer, normalizeCase, etc.) are honoured
+// when calling cnWhoisToRdap directly.
+export type CnConvertOptions = ConvertOptions;
 
 export function cnWhoisToRdap(raw: string, opts: CnConvertOptions = {}): RdapDomain {
   const data = parseCnWhois(raw);
@@ -183,5 +185,5 @@ export function cnWhoisToRdap(raw: string, opts: CnConvertOptions = {}): RdapDom
     result.secureDNS = { delegationSigned: signed };
   }
 
-  return result;
+  return finalize(result, raw, opts);
 }

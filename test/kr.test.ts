@@ -13,9 +13,9 @@ describe("parseKrWhois", () => {
 
   it("extracts domain and dates from the English section", () => {
     expect(data.domain).toBe("naver.kr");
-    expect(data.registeredDate).toBe("2007-03-02T00:00:00Z");
-    expect(data.lastUpdatedDate).toBe("2024-02-14T00:00:00Z");
-    expect(data.expirationDate).toBe("2026-03-02T00:00:00Z");
+    expect(data.registeredDate).toBe("2007-03-02T00:00:00+09:00");
+    expect(data.lastUpdatedDate).toBe("2024-02-14T00:00:00+09:00");
+    expect(data.expirationDate).toBe("2026-03-02T00:00:00+09:00");
   });
 
   it("extracts registrant, admin, and registrar", () => {
@@ -47,11 +47,11 @@ describe("krWhoisToRdap", () => {
     expect(rdap.rdapConformance).toEqual(["rdap_level_0"]);
   });
 
-  it("maps events", () => {
+  it("maps events with KST offset", () => {
     expect(rdap.events).toEqual([
-      { eventAction: "registration", eventDate: "2007-03-02T00:00:00Z" },
-      { eventAction: "last changed", eventDate: "2024-02-14T00:00:00Z" },
-      { eventAction: "expiration", eventDate: "2026-03-02T00:00:00Z" },
+      { eventAction: "registration", eventDate: "2007-03-02T00:00:00+09:00" },
+      { eventAction: "last changed", eventDate: "2024-02-14T00:00:00+09:00" },
+      { eventAction: "expiration", eventDate: "2026-03-02T00:00:00+09:00" },
     ]);
   });
 
@@ -77,6 +77,12 @@ describe("krWhoisToRdap", () => {
 
   it("marks DNSSEC as unsigned", () => {
     expect(rdap.secureDNS).toEqual({ delegationSigned: false });
+  });
+
+  it("honours sourceServer when called directly", () => {
+    const r = krWhoisToRdap(fixture, { sourceServer: "whois.kr" });
+    expect(r.port43).toBe("whois.kr");
+    expect(r.notices?.some((n) => n.title === "Source")).toBe(true);
   });
 });
 
@@ -125,6 +131,24 @@ describe("krWhoisToRdap with status and signed DNSSEC", () => {
     expect(rdap.nameservers).toEqual([
       { objectClassName: "nameserver", ldhName: "adel.ns.cloudflare.com" },
       { objectClassName: "nameserver", ldhName: "trey.ns.cloudflare.com" },
+    ]);
+  });
+});
+
+describe("krWhoisToRdap status accumulation", () => {
+  it("accumulates multiple Domain Status lines", () => {
+    const raw = `
+# ENGLISH
+
+Domain Name                 : multi.kr
+Domain Status               : clientDeleteProhibited
+Domain Status               : clientTransferProhibited
+Registered Date             : 2020. 01. 01.
+`;
+    const data = parseKrWhois(raw);
+    expect(data.status).toEqual([
+      "client delete prohibited",
+      "client transfer prohibited",
     ]);
   });
 });
