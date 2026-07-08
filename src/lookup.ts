@@ -135,6 +135,14 @@ export interface LookupOptions extends ConvertOptions {
   validateTld?: boolean;
   /** Forwarded to the IANA TLD list loader (used when validateTld is true). */
   tldList?: TldLoadOptions;
+  /**
+   * Follow the registrar's RDAP referral (top-level link with rel="related",
+   * type "application/rdap+json") to enrich a thin registry response with the
+   * registrar's thick data — e.g. a `reseller` entity and richer contacts.
+   * Adds one extra HTTP request. Graceful: a failed referral leaves the registry
+   * response untouched. Only applies to the RDAP path. Default: false.
+   */
+  followRegistrarReferral?: boolean;
   fetchImpl?: typeof fetch;
 }
 
@@ -179,6 +187,45 @@ async function fetchRdapDomain(
   );
 }
 
+// The registrar's thick RDAP URL — a top-level link with rel="related" and an
+// RDAP media type (registries advertise the registrar's RDAP referral here).
+function relatedRdapUrl(rdap: RdapDomain): string | undefined {
+  for (const link of rdap.links ?? []) {
+    const type = link.type ?? "";
+    if (link.rel === "related" && link.href && (type === "" || /rdap\+json/i.test(type))) {
+      return link.href;
+    }
+  }
+  return undefined;
+}
+
+async function fetchRdapUrl(url: string, options: LookupOptions): Promise<RdapDomain | null> {
+  const fetchImpl = options.fetchImpl ?? fetch;
+  const timeoutMs = options.timeoutMs ?? 10_000;
+  try {
+    const res = await fetchImpl(url, {
+      headers: { Accept: "application/rdap+json" },
+      signal: AbortSignal.timeout(timeoutMs),
+    });
+    if (!res.ok) return null;
+    const json = (await res.json()) as RdapDomain;
+    if (options.normalizeCase !== false) normalizeLdhCase(json);
+    return json;
+  } catch {
+    return null;
+  }
+}
+
+// Merge the registrar's thick entities into a thin registry response: append any
+// entity that introduces a role the base lacks (reseller, registrant, technical …).
+function mergeReferralEntities(base: RdapDomain, thick: RdapDomain): void {
+  const have = new Set((base.entities ?? []).flatMap((e) => e.roles ?? []));
+  const additions = (thick.entities ?? []).filter((e) =>
+    (e.roles ?? []).some((r) => !have.has(r)),
+  );
+  if (additions.length) base.entities = [...(base.entities ?? []), ...additions];
+}
+
 export async function lookupRdap(domain: string, options: LookupOptions = {}): Promise<RdapDomain> {
   const raw = domain.trim().toLowerCase();
   if (!raw) throw new Error("lookupRdap: domain is required");
@@ -201,6 +248,14 @@ export async function lookupRdap(domain: string, options: LookupOptions = {}): P
     if (baseUrls?.length) {
       const result = await fetchRdapDomain(baseUrls, normalized, options);
       if (unicode && !result.unicodeName) result.unicodeName = unicode;
+      // Enrich thin registry data with the registrar's thick RDAP (reseller etc.).
+      if (options.followRegistrarReferral) {
+        const referral = relatedRdapUrl(result);
+        if (referral) {
+          const thick = await fetchRdapUrl(referral, options);
+          if (thick) mergeReferralEntities(result, thick);
+        }
+      }
       return result;
     }
   }

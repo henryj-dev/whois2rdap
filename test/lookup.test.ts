@@ -95,6 +95,61 @@ describe("lookupRdap with IANA bootstrap", () => {
     expect(fetch404).toHaveBeenCalledTimes(1);
   });
 
+  it("follows the registrar referral to enrich thin data with a reseller", async () => {
+    setIanaRdapBootstrapCache(new Map([["com", ["https://registry.example.test/"]]]));
+
+    const thin = {
+      objectClassName: "domain",
+      ldhName: "example.com",
+      links: [
+        { rel: "self", type: "application/rdap+json", href: "https://registry.example.test/domain/example.com" },
+        { rel: "related", type: "application/rdap+json", href: "https://rdap.registrar.test/domain/example.com" },
+      ],
+      entities: [{ objectClassName: "entity", roles: ["registrar"] }],
+    };
+    const thick = {
+      objectClassName: "domain",
+      ldhName: "example.com",
+      entities: [
+        { objectClassName: "entity", roles: ["registrar"] },
+        {
+          objectClassName: "entity",
+          roles: ["reseller"],
+          vcardArray: ["vcard", [["version", {}, "text", "4.0"], ["fn", {}, "text", "Acme Reseller"]]],
+        },
+      ],
+    };
+
+    const fetchImpl = vi.fn(async (input: RequestInfo | URL) => {
+      const url = String(input);
+      if (url.startsWith("https://registry.example.test")) return new Response(JSON.stringify(thin), { status: 200 });
+      if (url.startsWith("https://rdap.registrar.test")) return new Response(JSON.stringify(thick), { status: 200 });
+      return new Response("nope", { status: 404 });
+    });
+
+    const result = await lookupRdap("example.com", {
+      fetchImpl: fetchImpl as unknown as typeof fetch,
+      followRegistrarReferral: true,
+    });
+    const reseller = (result.entities ?? []).find((e) => e.roles?.includes("reseller"));
+    expect(reseller).toBeDefined();
+    const fn = reseller?.vcardArray?.[1].find((p) => p[0] === "fn")?.[3];
+    expect(fn).toBe("Acme Reseller");
+    expect(fetchImpl).toHaveBeenCalledTimes(2); // registry + referral
+  });
+
+  it("does not follow the referral unless enabled", async () => {
+    setIanaRdapBootstrapCache(new Map([["com", ["https://registry.example.test/"]]]));
+    const thin = {
+      objectClassName: "domain",
+      ldhName: "example.com",
+      links: [{ rel: "related", type: "application/rdap+json", href: "https://rdap.registrar.test/domain/example.com" }],
+    };
+    const fetchImpl = vi.fn(async () => new Response(JSON.stringify(thin), { status: 200 }));
+    await lookupRdap("example.com", { fetchImpl: fetchImpl as unknown as typeof fetch });
+    expect(fetchImpl).toHaveBeenCalledTimes(1); // registry only
+  });
+
   it("throws when neither bootstrap nor WHOIS knows the TLD", async () => {
     setIanaRdapBootstrapCache(new Map());
     const fetchImpl = vi.fn();
