@@ -1,6 +1,6 @@
 {
   "name": "whois2rdap",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Convert WHOIS responses into RDAP-shaped objects",
   "type": "module",
   "main": "./dist/index.cjs",
