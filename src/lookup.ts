@@ -69,6 +69,7 @@ export function whoisQuery({
 const TLD_TO_WHOIS_SERVER: Record<string, string> = {
   kr: "whois.kr",
   cn: "whois.cnnic.cn",
+  se: "whois.iis.se",
 };
 
 export function whoisServerForDomain(domain: string): string | undefined {

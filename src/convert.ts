@@ -1,5 +1,6 @@
 import { krWhoisToRdap } from "./parsers/kr.js";
 import { cnWhoisToRdap } from "./parsers/cn.js";
+import { seWhoisToRdap } from "./parsers/se.js";
 import { genericWhoisToRdap } from "./parsers/generic.js";
 import type { ConvertOptions, RdapDomain } from "./types.js";
 
@@ -13,6 +14,11 @@ function detectCn(whois: string, domain: string): boolean {
   return /whois\.cnnic\.cn|CNNIC/i.test(whois) || /^ROID:\s/m.test(whois);
 }
 
+function detectSe(whois: string, domain: string): boolean {
+  if (/\.se$/i.test(domain)) return true;
+  return /whois\.iis\.se|\.se top level domain|Swedish Internet Foundation/i.test(whois);
+}
+
 export function whoisToRdap(whois: string, options: ConvertOptions = {}): RdapDomain {
   const domain = options.domain ?? "";
 
@@ -21,6 +27,9 @@ export function whoisToRdap(whois: string, options: ConvertOptions = {}): RdapDo
   }
   if (detectCn(whois, domain)) {
     return cnWhoisToRdap(whois, options);
+  }
+  if (detectSe(whois, domain)) {
+    return seWhoisToRdap(whois, options);
   }
   // Generic parser handles all other TLDs.
   return genericWhoisToRdap(whois, options);

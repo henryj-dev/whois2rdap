@@ -40,6 +40,13 @@ export {
   type CnWhoisData,
 } from "./parsers/cn.js";
 export {
+  seWhoisToRdap,
+  parseSeWhois,
+  type SeConvertOptions,
+  type SeNameserver,
+  type SeWhoisData,
+} from "./parsers/se.js";
+export {
   genericWhoisToRdap,
   parseGenericWhois,
   type GenericWhoisData,
