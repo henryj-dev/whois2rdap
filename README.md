@@ -13,7 +13,7 @@ Convert WHOIS responses into [RFC 9083](https://datatracker.ietf.org/doc/html/rf
 - **`whoisToRdap(text)`** — pure converter from raw WHOIS text to an RDAP `domain` object.
 - **`whoisQuery({ host, query })`** — low-level port-43 client.
 - **RFC 9083 compliant output** — `objectClassName`, `rdapConformance`, jCard `vcardArray`, EPP→RDAP status mapping (RFC 8056), `port43`, `notices`, lowercase `ldhName` normalization.
-- **TLD parsers** — currently `.kr` (KISA/KRNIC) and `.cn` (CNNIC). The architecture is pluggable; add a parser per TLD in `src/parsers/`.
+- **TLD parsers** — dedicated parsers for `.kr` (KISA/KRNIC), `.cn` (CNNIC), `.se` (IIS), and `.jp` (JPRS); a format-aware generic parser handles every other WHOIS registry (see [Parser coverage](#parser-coverage)). The architecture is pluggable; add a parser per TLD in `src/parsers/`.
 - **Zero runtime dependencies.** Built with `tsup` for ESM + CJS + `.d.ts`.
 
 ## Install
@@ -201,8 +201,29 @@ The bootstrap is fetched lazily on first use and cached in memory for 24h.
 | `.com`, `.net`, `.org`, `.site`, `.blog`, ... | IANA RDAP passthrough | Anything in `data.iana.org/rdap/dns.json` |
 | `.kr` | WHOIS → KR parser | KISA/KRNIC, English section preferred |
 | `.cn` | WHOIS → CN parser | CNNIC, ROID → `handle`, `signedDelegation` → `secureDNS` |
+| `.se` | WHOIS → SE parser | IIS |
+| `.jp` | WHOIS → JP parser | JPRS bracket format; Japanese-only date keys |
+| every other WHOIS registry | WHOIS → generic parser | See [Parser coverage](#parser-coverage) |
 
-PRs welcome for more TLDs — add a parser at `src/parsers/<tld>.ts` and wire it into `src/convert.ts`.
+PRs welcome for dedicated parsers — add one at `src/parsers/<tld>.ts` and wire it into `src/convert.ts`.
+
+### Parser coverage
+
+The generic parser is not a lowest-common-denominator fallback; it reads the two
+structural shapes registries actually use — inline `Key: value` and indented
+blocks (EURid, DNS Belgium, CentralNic) — across the label variants and
+languages they publish in (`nom de domaine`, `登録年月日`, dot-padded
+`domain....:` keys, `**`-bulleted keys, ordinal `24th April 1997` dates).
+
+Measured against a corpus of real responses from 106 WHOIS registries
+(`npm run bench:parsers`), it fills a mean of 4.6 of the 6 core fields
+(`ldhName`, `status`, registration/expiration dates, registrar, nameservers),
+with 68 registries at 5–6 fields. The rest are not parser gaps: a response
+scores low either because `lookupRdap` rejects it outright (a refusal or an
+unregistered name — see [Why responses are classified](#why-responses-are-classified))
+or because the registry simply publishes little over port 43 — DENIC returns two
+fields, `.at` omits dates entirely. The parser extracts what is present; it
+cannot invent what the registry withholds.
 
 ## RFC 9083 conformance
 
@@ -230,14 +251,20 @@ bun run build
 
 ```bash
 npm run gen:whois-availability   # regenerate src/whois-availability.ts
-npm run probe:whois-formats      # measure parser coverage against live registries
-npm run probe:whois-formats -- se kr cn   # …or just these TLDs
+npm run probe:whois-formats      # capture live responses, report parser coverage
+npm run bench:parsers            # replay captured responses, score the parsers (no network)
+npm run bench:parsers -- -v      # …with a per-TLD breakdown
 ```
 
-`probe:whois-formats` samples every WHOIS-only registry with a real apex domain
-and reports what the parsers extracted. Two things keep it cheap: TLDs share
-servers (179 WHOIS-only TLDs sit behind 132 hosts — India's 15 IDN TLDs all
-answer from `whois.nixiregistry.in`), so it queries once per *server*; and a
+`bench:parsers` replays the responses `probe:whois-formats` saved under
+`.whois-probe/`, so the edit → measure loop for parser work runs offline in a
+second.
+
+`probe:whois-formats` is the networked half: it samples every WHOIS-only
+registry with a real apex domain and reports what the parsers extracted. Two
+things keep it cheap: TLDs share servers (179 WHOIS-only TLDs sit behind 132
+hosts — India's 15 IDN TLDs all answer from `whois.nixiregistry.in`), so it
+queries once per *server*; and a
 registry's own domain (`nic.<tld>`, or the whois host minus its `whois.` prefix)
 is registered almost everywhere, so a candidate ladder finds a live record
 without hand-curating 132 entries. `scripts/representative-domains.json` covers

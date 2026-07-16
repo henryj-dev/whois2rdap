@@ -13,7 +13,7 @@ WHOIS 응답을 [RFC 9083](https://datatracker.ietf.org/doc/html/rfc9083) RDAP J
 - **`whoisToRdap(text)`** — WHOIS 원문 텍스트를 RDAP `domain` 객체로 변환하는 순수 함수
 - **`whoisQuery({ host, query })`** — 저수준 port-43 클라이언트
 - **RFC 9083 호환 출력** — `objectClassName`, `rdapConformance`, jCard `vcardArray`, EPP→RDAP status 매핑(RFC 8056), `port43`, `notices`, `ldhName` 소문자 정규화
-- **TLD 파서** — 현재 `.kr`(KISA/KRNIC), `.cn`(CNNIC) 지원. `src/parsers/`에 파일 추가하는 식의 플러그형 구조
+- **TLD 파서** — `.kr`(KISA/KRNIC), `.cn`(CNNIC), `.se`(IIS), `.jp`(JPRS) 전용 파서 + 그 외 모든 WHOIS 레지스트리를 다루는 포맷 인식 generic 파서 ([파서 커버리지](#파서-커버리지) 참고). `src/parsers/`에 파일 추가하는 플러그형 구조
 - **런타임 의존성 0개.** `tsup`으로 ESM + CJS + `.d.ts` 동시 빌드
 
 ## 설치
@@ -196,8 +196,26 @@ bootstrap은 첫 호출 시 lazy하게 가져와서 24시간 메모리 캐시됩
 | `.com`, `.net`, `.org`, `.site`, `.blog`, ... | IANA RDAP 패스스루 | `data.iana.org/rdap/dns.json`에 등록된 모든 TLD |
 | `.kr` | WHOIS → KR 파서 | KISA/KRNIC, 영문 섹션 우선 |
 | `.cn` | WHOIS → CN 파서 | CNNIC, ROID → `handle`, `signedDelegation` → `secureDNS` |
+| `.se` | WHOIS → SE 파서 | IIS |
+| `.jp` | WHOIS → JP 파서 | JPRS 대괄호 포맷, 일본어 전용 날짜 키 |
+| 그 외 모든 WHOIS 레지스트리 | WHOIS → generic 파서 | [파서 커버리지](#파서-커버리지) 참고 |
 
-새 TLD 추가는 `src/parsers/<tld>.ts`를 작성하고 `src/convert.ts`에 디스패치만 연결하면 됩니다. PR 환영합니다.
+전용 파서 추가는 `src/parsers/<tld>.ts`를 작성하고 `src/convert.ts`에 디스패치만 연결하면 됩니다. PR 환영합니다.
+
+### 파서 커버리지
+
+generic 파서는 최소공배수식 fallback 이 아닙니다. 레지스트리가 실제로 쓰는 두 가지
+구조 — 인라인 `Key: value` 와 들여쓰기 블록(EURid, DNS Belgium, CentralNic) — 을
+읽고, 그들이 쓰는 라벨 변형·언어(`nom de domaine`, `登録年月日`, 점 패딩
+`domain....:` 키, `**` 불릿 키, ordinal `24th April 1997` 날짜)를 처리합니다.
+
+실제 WHOIS 레지스트리 106곳의 응답 코퍼스로 측정(`npm run bench:parsers`)하면 6개 핵심
+필드(`ldhName`, `status`, 등록/만료일, registrar, nameserver) 중 평균 4.6개를 채우고,
+68곳이 5–6개에 도달합니다. 나머지가 낮은 건 파서 결함이 아닙니다. `lookupRdap` 이
+아예 거부하는 응답(거부/미등록 — [응답을 분류하는 이유](#응답을-분류하는-이유) 참고)
+이거나, 레지스트리가 port 43 으로 애초에 적게 공개하는 경우(DENIC 은 2필드, `.at` 은
+날짜 미공개)입니다. 파서는 있는 것을 추출할 뿐, 레지스트리가 감춘 것을 지어내지
+않습니다.
 
 ## RFC 9083 준수 현황
 
@@ -220,6 +238,19 @@ bun run typecheck
 bun run test
 bun run build
 ```
+
+### 유지보수 스크립트
+
+```bash
+npm run gen:whois-availability   # src/whois-availability.ts 재생성
+npm run probe:whois-formats      # 라이브 응답 수집 + 파서 커버리지 리포트
+npm run bench:parsers            # 수집된 응답 재생(오프라인)으로 파서 채점
+npm run bench:parsers -- -v      # …TLD 별 상세 포함
+```
+
+`bench:parsers` 는 `probe:whois-formats` 가 `.whois-probe/` 에 저장한 응답을 재생하므로
+파서 작업의 edit → measure 루프가 네트워크 없이 1초 안에 돕니다. 응답 판별 로직은
+`src/whois-response.ts` 에 있어 probe 와 `lookupRdap` 이 동일하게 응답을 판정합니다.
 
 ## 라이선스
 
