@@ -42,6 +42,8 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",
+    "gen:whois-availability": "node scripts/gen-whois-availability.mjs",
+    "probe:whois-formats": "npm run build && node scripts/probe-whois-formats.mjs",
     "prepublishOnly": "npm run build"
   },
   "keywords": [

@@ -9,3 +9,6 @@ coverage
 !.env.example
 bun.lock
 bun.lockb
+
+# WHOIS format probe output (scripts/probe-whois-formats.mjs)
+.whois-probe/
