@@ -1,6 +1,7 @@
 import { krWhoisToRdap } from "./parsers/kr.js";
 import { cnWhoisToRdap } from "./parsers/cn.js";
 import { seWhoisToRdap } from "./parsers/se.js";
+import { jpWhoisToRdap } from "./parsers/jp.js";
 import { genericWhoisToRdap } from "./parsers/generic.js";
 import type { ConvertOptions, RdapDomain } from "./types.js";
 
@@ -19,6 +20,12 @@ function detectSe(whois: string, domain: string): boolean {
   return /whois\.iis\.se|\.se top level domain|Swedish Internet Foundation/i.test(whois);
 }
 
+function detectJp(whois: string, domain: string): boolean {
+  if (/\.jp$/i.test(domain)) return true;
+  // The JPRS banner and its bracket-key layout are unmistakable.
+  return /whois\.jprs\.jp|\[Domain Name\]|\[ドメイン(?:名|情報)\]/.test(whois);
+}
+
 export function whoisToRdap(whois: string, options: ConvertOptions = {}): RdapDomain {
   const domain = options.domain ?? "";
 
@@ -30,6 +37,9 @@ export function whoisToRdap(whois: string, options: ConvertOptions = {}): RdapDo
   }
   if (detectSe(whois, domain)) {
     return seWhoisToRdap(whois, options);
+  }
+  if (detectJp(whois, domain)) {
+    return jpWhoisToRdap(whois, options);
   }
   // Generic parser handles all other TLDs.
   return genericWhoisToRdap(whois, options);

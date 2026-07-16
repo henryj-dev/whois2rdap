@@ -71,5 +71,12 @@ export {
 export {
   genericWhoisToRdap,
   parseGenericWhois,
+  buildRdapDomain,
+  parseGenericDate,
+  normalizeGenericStatus,
   type GenericWhoisData,
 } from "./parsers/generic.js";
+export {
+  jpWhoisToRdap,
+  parseJpWhois,
+} from "./parsers/jp.js";

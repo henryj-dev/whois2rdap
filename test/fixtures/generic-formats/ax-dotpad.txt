@@ -1,0 +1,31 @@
+
+
+domain...............: nic.ax
+status...............: Registered
+created..............: 05.09.2016
+expires..............: 05.09.2026
+available............: 06.10.2026
+modified.............: 29.08.2025
+RegistryLock.........: no
+
+Nameservers
+
+
+Holder
+
+name.................: NETIM
+register number......: 451394720
+address..............: 165 avenue de bretagne
+address..............: 59000
+address..............: LILLE
+country..............: FR
+phone................: +33 972307470
+holder email.........: tld@netim.com
+
+Registrar
+
+registrar............: NETIM
+www..................: https://www.netim.com/en/domain-name/ax-domain
+
+Copyright (c) Ålands Landskapsregering
+

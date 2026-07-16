@@ -1,0 +1,69 @@
+
+Domain ID:                     DOM4931-GA
+Nom de domaine:                nic.ga
+Date de création:              2023-06-05T00:00:00Z
+Dernière modification:         2026-06-05T00:01:54.107421Z
+Date d'expiration:             2027-06-05T00:00:00Z
+Registrar:                     Registry Operations
+Statut:                        actif
+
+[HOLDER]
+ID Contact:                    REDACTED_FOR_PRIVACY
+Type:                          Personne Physique
+Nom:                           REDACTED_FOR_PRIVACY
+Adresse:                       REDACTED_FOR_PRIVACY,REDACTED_FOR_PRIVACY,REDACTED_FOR_PRIVACY
+Code postal:                   REDACTED_FOR_PRIVACY
+Ville:                         REDACTED_FOR_PRIVACY
+Pays:                          REDACTED_FOR_PRIVACY
+Téléphone:                     REDACTED_FOR_PRIVACY
+Fax:                           REDACTED_FOR_PRIVACY
+Courriel:                      REDACTED_FOR_PRIVACY
+
+[BILLING_C]
+ID Contact:                    REDACTED_FOR_PRIVACY
+Type:                          Personne Physique
+Nom:                           REDACTED_FOR_PRIVACY
+Adresse:                       REDACTED_FOR_PRIVACY,REDACTED_FOR_PRIVACY,REDACTED_FOR_PRIVACY
+Code postal:                   REDACTED_FOR_PRIVACY
+Ville:                         REDACTED_FOR_PRIVACY
+Pays:                          REDACTED_FOR_PRIVACY
+Téléphone:                     REDACTED_FOR_PRIVACY
+Fax:                           REDACTED_FOR_PRIVACY
+Courriel:                      REDACTED_FOR_PRIVACY
+
+[ADMIN_C]
+ID Contact:                    REDACTED_FOR_PRIVACY
+Type:                          Personne Physique
+Nom:                           REDACTED_FOR_PRIVACY
+Adresse:                       REDACTED_FOR_PRIVACY,REDACTED_FOR_PRIVACY,REDACTED_FOR_PRIVACY
+Code postal:                   REDACTED_FOR_PRIVACY
+Ville:                         REDACTED_FOR_PRIVACY
+Pays:                          REDACTED_FOR_PRIVACY
+Téléphone:                     REDACTED_FOR_PRIVACY
+Fax:                           REDACTED_FOR_PRIVACY
+Courriel:                      REDACTED_FOR_PRIVACY
+
+[TECH_C]
+ID Contact:                    REDACTED_FOR_PRIVACY
+Type:                          Personne Physique
+Nom:                           REDACTED_FOR_PRIVACY
+Adresse:                       REDACTED_FOR_PRIVACY,REDACTED_FOR_PRIVACY,REDACTED_FOR_PRIVACY
+Code postal:                   REDACTED_FOR_PRIVACY
+Ville:                         REDACTED_FOR_PRIVACY
+Pays:                          REDACTED_FOR_PRIVACY
+Téléphone:                     REDACTED_FOR_PRIVACY
+Fax:                           REDACTED_FOR_PRIVACY
+Courriel:                      REDACTED_FOR_PRIVACY
+
+Serveur de noms:               ns1.nic.fr
+Serveur de noms:               ns2.nic.fr
+Serveur de noms:               ns3.nic.fr
+Serveur de noms:               ns7.ext.nic.fr
+
+DNSSEC:                        signedDelegation
+
+>>> Last update of WHOIS database: 2026-07-16T07:22:25.951445Z <<<
+
+%% This is the ANINF Whois server.
+%%
+%% complete date format: YYYY-MM-DDThh:mm:ssZ
