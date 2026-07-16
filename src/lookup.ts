@@ -4,6 +4,14 @@ import { whoisToRdap } from "./convert.js";
 import { normalizeLdhCase } from "./normalize.js";
 import { rdapBaseUrlsForTld, type BootstrapLoadOptions } from "./iana.js";
 import { isValidTld, type TldLoadOptions } from "./tld.js";
+import { whoisAvailabilityForTld } from "./whois-availability.js";
+import { classifyWhoisResponse, whoisResponseHint } from "./whois-response.js";
+import {
+  DomainNotFoundError,
+  WhoisNoRecordError,
+  WhoisQueryError,
+  WhoisUnavailableError,
+} from "./errors.js";
 
 export interface WhoisQueryOptions {
   host: string;
@@ -81,6 +89,19 @@ export function whoisServerForDomain(domain: string): string | undefined {
 // Per-TLD WHOIS server cache populated by IANA WHOIS discovery.
 const ianaWhoisCache = new Map<string, string | null>();
 
+/**
+ * The WHOIS server in a whois.iana.org root-database response, or undefined
+ * when the record leaves `whois:` blank.
+ *
+ * The capture is anchored to the end of the line on purpose: IANA emits a bare
+ * `whois:` for TLDs with no server, and an unanchored `\s*(\S+)` would swallow
+ * the newline and capture the *next* line's value — returning "status:" as the
+ * hostname for .gb, .bv, .kp and every other server-less TLD.
+ */
+export function parseIanaWhoisServer(response: string): string | undefined {
+  return response.match(/^whois:[ \t]*(\S+)[ \t]*\r?$/im)?.[1];
+}
+
 /** Look up the WHOIS server for a TLD via whois.iana.org and cache the result. */
 async function discoverWhoisServer(
   tld: string,
@@ -96,8 +117,7 @@ async function discoverWhoisServer(
       timeoutMs: options.timeoutMs,
       maxBytes: options.maxBytes,
     });
-    const m = response.match(/^whois:\s*(\S+)/im);
-    const server = m?.[1] ?? null;
+    const server = parseIanaWhoisServer(response) ?? null;
     ianaWhoisCache.set(tld, server);
     return server ?? undefined;
   } catch {
@@ -131,6 +151,21 @@ export interface LookupOptions extends ConvertOptions {
   bootstrap?: BootstrapLoadOptions;
   /** Discover the WHOIS server via whois.iana.org when not in the static map. Default: true. */
   useIanaWhoisDiscovery?: boolean;
+  /**
+   * Consult the bundled WHOIS availability table when IANA lists no server for
+   * the TLD. It supplies servers IANA omits and turns the hopeless cases into a
+   * `WhoisUnavailableError` that says why. Set false to rely on IANA alone.
+   * Default: true.
+   */
+  useWhoisAvailabilityTable?: boolean;
+  /**
+   * Check what a WHOIS server actually returned before parsing it, raising
+   * `DomainNotFoundError` for an unregistered name and `WhoisNoRecordError` for
+   * a rejection. Set false to parse every response regardless — which returns a
+   * near-empty object for both cases, indistinguishable from a registry that
+   * publishes little. Default: true.
+   */
+  classifyResponse?: boolean;
   /** Validate the TLD against the IANA TLD list before lookup. Default: false. */
   validateTld?: boolean;
   /** Forwarded to the IANA TLD list loader (used when validateTld is true). */
@@ -260,26 +295,83 @@ export async function lookupRdap(domain: string, options: LookupOptions = {}): P
     }
   }
 
-  // 2) Static WHOIS server map (kr, cn).
+  // 2) Static WHOIS server map (kr, cn, se).
   // 3) Dynamic WHOIS server discovery via whois.iana.org.
   let server = options.server ?? whoisServerForDomain(normalized);
   if (!server && options.useIanaWhoisDiscovery !== false) {
     server = await discoverWhoisServer(tld, options);
   }
 
+  // 4) Fall back to the bundled table, but only once IANA has come back empty —
+  //    IANA stays authoritative, so a stale "none" here can never mask a server
+  //    the registry has since published.
+  if (!server && options.useWhoisAvailabilityTable !== false) {
+    const availability = whoisAvailabilityForTld(tld);
+    if (availability?.kind === "server") {
+      server = availability.host;
+    } else if (availability?.kind === "none") {
+      throw new WhoisUnavailableError(
+        `lookupRdap: no IANA RDAP entry and no WHOIS server found for "${normalized}" — ` +
+          `the ".${tld}" registry publishes no WHOIS service`,
+        { tld, reason: "no-whois-server" },
+      );
+    } else if (availability?.kind === "web") {
+      throw new WhoisUnavailableError(
+        `lookupRdap: no IANA RDAP entry and no WHOIS server found for "${normalized}" — ` +
+          `".${tld}" offers WHOIS only as a web form: ${availability.url}`,
+        { tld, reason: "web-only", webUrl: availability.url },
+      );
+    }
+  }
+
   if (!server) {
-    throw new Error(
+    throw new WhoisUnavailableError(
       `lookupRdap: no IANA RDAP entry and no WHOIS server found for "${normalized}"`,
+      { tld, reason: "no-source" },
     );
   }
 
-  const text = await whoisQuery({
-    host: server,
-    query: normalized,
-    port: options.port,
-    timeoutMs: options.timeoutMs,
-    maxBytes: options.maxBytes,
-  });
+  let text: string;
+  try {
+    text = await whoisQuery({
+      host: server,
+      query: normalized,
+      port: options.port,
+      timeoutMs: options.timeoutMs,
+      maxBytes: options.maxBytes,
+    });
+  } catch (err) {
+    // A known server that would not answer — transient, unlike the cases above.
+    throw new WhoisQueryError(
+      `lookupRdap: WHOIS query for "${normalized}" via ${server} failed: ` +
+        `${err instanceof Error ? err.message : String(err)}`,
+      { host: server, cause: err },
+    );
+  }
+
+  // A WHOIS server reports "no such domain" and "you may not ask" as prose over
+  // the same channel as a record. Without this check all three parse down to an
+  // object carrying nothing but the name the caller passed in — a fabricated
+  // answer that reads exactly like a real one for a registry that publishes
+  // little (DENIC returns two fields for a live domain).
+  if (options.classifyResponse !== false) {
+    const kind = classifyWhoisResponse(text, normalized);
+    if (kind === "not-found") {
+      throw new DomainNotFoundError(
+        `lookupRdap: ${server} reports no registration for "${normalized}"`,
+        { domain: normalized, host: server },
+      );
+    }
+    if (kind === "refused" || kind === "unknown") {
+      const hint = whoisResponseHint(text);
+      throw new WhoisNoRecordError(
+        `lookupRdap: ${server} returned no record for "${normalized}"` +
+          (kind === "refused" ? " — the server rejected the query" : "") +
+          (hint ? `: ${hint}` : ""),
+        { reason: kind === "refused" ? "refused" : "unrecognized", domain: normalized, host: server, hint },
+      );
+    }
+  }
 
   const result = whoisToRdap(text, {
     ...options,
