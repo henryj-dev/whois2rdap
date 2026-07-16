@@ -60,6 +60,88 @@ const rdap = await lookupRdap("example.com");
 | `timeoutMs` | `number` | Timeout for either path. Default `10_000`. |
 | `normalizeCase` | `boolean` | Lowercase `ldhName` on the domain and nameservers. Default `true`. |
 | `includeRawWhoisNotice` | `boolean` | Include the raw WHOIS text as an extra `notices[]` entry (WHOIS path only). |
+| `useWhoisAvailabilityTable` | `boolean` | Consult the bundled availability table when IANA lists no WHOIS server. Default `true`. |
+| `classifyResponse` | `boolean` | Check what the server returned before parsing it. Default `true`. See [Why responses are classified](#why-responses-are-classified). |
+
+### Errors
+
+Every failure carries `permanent`, which answers the only question a caller
+really has: could retrying ever help?
+
+| class | `permanent` | meaning |
+| --- | --- | --- |
+| `WhoisUnavailableError` | `true` | No source exists for this TLD at all. |
+| `DomainNotFoundError` | `true` | The registry answered: no such registration. |
+| `WhoisNoRecordError` | `true` | The server replied but gave us no record. |
+| `WhoisQueryError` | `false` | A known server was unreachable. Retrying may succeed. |
+
+`WhoisUnavailableError.reason` says which permanent case applies:
+
+- `no-whois-server` — the registry publishes no WHOIS at all (`.gb`, `.kp`, `.mil`).
+- `web-only` — WHOIS exists only as a web form; `webUrl` points a human at it (`.gr`, `.ph`).
+- `no-source` — neither RDAP nor any known WHOIS server for the TLD.
+
+`WhoisNoRecordError.reason` distinguishes a rejection from a puzzle, and `hint`
+carries the server's own words:
+
+- `refused` — blocked, rate-limited, or IP-restricted. `.ch` and `.li` answer
+  every query with a pointer to their web form; `.es` serves its terms of use to
+  any IP Red.es has not authorized. Retrying is futile — lifting these needs an
+  out-of-band step, not a second attempt.
+- `unrecognized` — a response arrived with nothing in it resembling a record.
+
+```ts
+import { lookupRdap, DomainNotFoundError, WhoisNoRecordError } from "whois2rdap";
+
+try {
+  const rdap = await lookupRdap("example.ch");
+} catch (err) {
+  if (err instanceof DomainNotFoundError) return null;          // no such domain
+  if (err instanceof WhoisNoRecordError) throw new Error(err.hint); // blocked
+  throw err;
+}
+```
+
+### Why responses are classified
+
+A WHOIS server reports "no such domain", "you may not ask", and "here is the
+record" as prose over one channel, with no status code. Parse all three and they
+collapse into the same shrug — an object carrying only the name you passed in —
+so `lookupRdap` classifies the response before parsing it (`classifyResponse`,
+on by default; `classifyWhoisResponse` is exported if you want it directly).
+
+Emptiness is not the signal. DENIC answers a *registered* domain with two fields
+and nothing else:
+
+```
+Domain: denic.de
+Status: connect
+```
+
+A thin result is therefore not evidence of a thin answer, and only the response's
+shape and wording tell the cases apart. The patterns were verified against 102
+real records from distinct registries — see the maintenance scripts below.
+
+### WHOIS availability table
+
+The IANA root database leaves `whois:` blank for 72 TLDs, but they are not alike:
+32 publish no WHOIS at all, 27 offer only a web form, and 13 are known to have a
+port-43 server IANA simply does not advertise. `WHOIS_AVAILABILITY` records the
+difference, and `lookupRdap` consults it *after* IANA discovery comes back
+empty — IANA stays authoritative, so a stale entry here can never mask a server
+a registry has since published.
+
+```ts
+import { whoisAvailabilityForTld } from "whois2rdap";
+
+whoisAvailabilityForTld("gb"); // { kind: "none" }
+whoisAvailabilityForTld("gr"); // { kind: "web", url: "https://grweb.ics.forth.gr/…" }
+whoisAvailabilityForTld("bz"); // { kind: "server", host: "whois.identitydigital.services" }
+whoisAvailabilityForTld("de"); // undefined — IANA already serves it
+```
+
+Regenerate it with `npm run gen:whois-availability` (merges the IANA root
+database with rfc1036/whois's `tld_serv_list`).
 
 ### `whoisToRdap(text, options?)`
 
@@ -143,6 +225,31 @@ bun run typecheck
 bun run test
 bun run build
 ```
+
+### Maintenance scripts
+
+```bash
+npm run gen:whois-availability   # regenerate src/whois-availability.ts
+npm run probe:whois-formats      # measure parser coverage against live registries
+npm run probe:whois-formats -- se kr cn   # …or just these TLDs
+```
+
+`probe:whois-formats` samples every WHOIS-only registry with a real apex domain
+and reports what the parsers extracted. Two things keep it cheap: TLDs share
+servers (179 WHOIS-only TLDs sit behind 132 hosts — India's 15 IDN TLDs all
+answer from `whois.nixiregistry.in`), so it queries once per *server*; and a
+registry's own domain (`nic.<tld>`, or the whois host minus its `whois.` prefix)
+is registered almost everywhere, so a candidate ladder finds a live record
+without hand-curating 132 entries. `scripts/representative-domains.json` covers
+the registries where that fails — reserved names (`nic.om`), restricted ones
+(`nic.nz`), and TLDs that sell only at the third level (`.il`, `.mm`).
+
+Interpreting a thin result needs care, so the library's `classifyWhoisResponse` separates
+three things a sparse response can mean — the server refused us (`.ch`), the name
+we picked is not registered (`nic.cn` is reserved), or the parser genuinely fell
+short. Only the last is a parser problem. It is worth reading before trusting any
+coverage number: nearly every registry appends a legal notice that trips naive
+refusal patterns.
 
 ## License
 
