@@ -44,6 +44,7 @@
     "test:watch": "vitest",
     "gen:whois-availability": "node scripts/gen-whois-availability.mjs",
     "probe:whois-formats": "npm run build && node scripts/probe-whois-formats.mjs",
+    "bench:parsers": "npm run build && node scripts/bench-parsers.mjs",
     "prepublishOnly": "npm run build"
   },
   "keywords": [
