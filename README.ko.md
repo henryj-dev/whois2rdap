@@ -254,4 +254,4 @@ npm run bench:parsers -- -v      # …TLD 별 상세 포함
 
 ## 라이선스
 
-MIT
+Apache-2.0
