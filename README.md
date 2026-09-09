@@ -280,4 +280,4 @@ refusal patterns.
 
 ## License
 
-MIT
+Apache-2.0

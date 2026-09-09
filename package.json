@@ -53,7 +53,7 @@
     "domain",
     "converter"
   ],
-  "license": "MIT",
+  "license": "Apache-2.0",
   "devDependencies": {
     "@types/node": "^22.0.0",
     "tsup": "^8.3.0",
